@@ -31,8 +31,61 @@
 	let selectedAgentForRecharge = $state<Agent | null>(null);
 
 	onMount(() => {
+		//@ts-ignore
+		const webApp = window.Telegram?.WebApp;
+		const locationManager = webApp?.LocationManager;
+
 		mapboxgl.accessToken = PUBLIC_MAPBOX_TOKEN;
 
+		if (locationManager) {
+			locationManager.init(() => {
+				// Check if GPS is enabled on the device hardware level
+				if (!locationManager.isLocationAvailable) {
+					console.warn('Location services are disabled on device.');
+					$pageView = 'allowlocation';
+					return;
+				}
+
+				// Request the high-accuracy location from Telegram
+				//@ts-ignore
+				locationManager.getLocation((data) => {
+					if (data) {
+						// Telegram returns { latitude, longitude, ... }
+						const { longitude, latitude } = data;
+						$CENTER_POINT = [longitude, latitude];
+						initMap([longitude, latitude]);
+					} else {
+						// User denied permission or error occurred
+						console.error('Telegram location access denied.');
+						$pageView = 'allowlocation';
+					}
+				});
+			});
+		} else {
+			// Fallback for browser testing or older Telegram versions
+			console.warn('Telegram LocationManager not found, using browser API.');
+			handleBrowserFallback();
+		}
+
+		// if ('geolocation' in navigator) {
+		// 	navigator.geolocation.getCurrentPosition(
+		// 		(position) => {
+		// 			const { longitude, latitude } = position.coords;
+		// 			$CENTER_POINT = [longitude, latitude];
+		// 			initMap([longitude, latitude]);
+		// 		},
+		// 		(error) => {
+		// 			console.error('Location error, loading fallback:', error);
+		// 			$pageView = 'allowlocation';
+		// 		}
+		// 	);
+		// } else {
+		// 	// initMap([-71.06776, 42.35816]);
+		// 	$pageView = 'allowlocation';
+		// }
+	});
+
+	function handleBrowserFallback() {
 		if ('geolocation' in navigator) {
 			navigator.geolocation.getCurrentPosition(
 				(position) => {
@@ -40,16 +93,14 @@
 					$CENTER_POINT = [longitude, latitude];
 					initMap([longitude, latitude]);
 				},
-				(error) => {
-					console.error('Location error, loading fallback:', error);
+				() => {
 					$pageView = 'allowlocation';
 				}
 			);
 		} else {
-			// initMap([-71.06776, 42.35816]);
 			$pageView = 'allowlocation';
 		}
-	});
+	}
 
 	function initMap(coords: [number, number]) {
 		map = new mapboxgl.Map({
