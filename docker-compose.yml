@@ -1,8 +1,31 @@
 version: '3.8'
+
 services:
+  sveltekit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sveltekit
+    restart: unless-stopped
+    ports:
+      - "3002:3000"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app_network
+
   postgres:
     image: postgres:16-alpine
     container_name: nomad_ai_db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: localpassword
@@ -11,6 +34,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+
+networks:
+  app_network:
 
 volumes:
   postgres_data:
