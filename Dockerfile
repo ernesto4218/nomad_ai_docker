@@ -19,7 +19,7 @@ COPY --from=builder /app/build ./build
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/drizzle ./drizzle
-COPY --from=builder /app/drizzle.config.js ./drizzle.config.js
+COPY --from=builder /app/migrate.js ./migrate.js
 COPY --from=builder /app/src/lib/server/db/schema.ts ./src/lib/server/db/schema.ts
 
 ENV NODE_ENV=production
