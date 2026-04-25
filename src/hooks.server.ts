@@ -7,7 +7,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   const path = event.url.pathname.toLowerCase();
 
   const isValidateRoute = path.includes('/api/post/validate');
-  const isCronRoute = path.startsWith('/api/cron/');  // 👈 add this
+  const isCronRoute = path.startsWith('/api/cron/');
 
   if (token) {
     try {
@@ -19,11 +19,20 @@ export const handle: Handle = async ({ event, resolve }) => {
     }
   }
 
-  if (!event.locals.user && !isValidateRoute && !isCronRoute) {  // 👈 add !isCronRoute
+  if (!event.locals.user && !isValidateRoute && !isCronRoute) {
     if (path.startsWith('/api')) {
       throw error(401, 'Unauthorized: Token required');
     }
   }
 
-  return await resolve(event);
+  const response = await resolve(event);
+
+  // Allow Telegram WebView to embed the app
+  response.headers.delete('X-Frame-Options');
+  response.headers.set(
+    'Content-Security-Policy',
+    "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org"
+  );
+
+  return response;
 };
