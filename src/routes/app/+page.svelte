@@ -10,28 +10,26 @@
 	import Upgrades from '$lib/pages/upgrades.svelte';
 	import { agents, maxAgentDeployed } from '$lib/stores/agents';
 	import { pageView } from '$lib/stores/pageView';
+	import { CENTER_POINT } from '$lib/stores/variables';
 
-	let dataReady = $state(false);
 	let animationDone = $state(false);
 
 	$effect(() => {
-		if (!page.data.userMap) return;
+		if (!animationDone) return;
 
-		$agents = page.data.agents ?? [];
-		$maxAgentDeployed = page.data.maxAgent ?? 0;
-		dataReady = true;
-	});
-
-	$effect(() => {
-		if (!dataReady || !animationDone) return;
-
-		if (!page.data.userMap.locked_lat || !page.data.userMap.locked_lng) {
+		if (!page.data.userMap?.locked_lat || !page.data.userMap?.locked_lng) {
+			console.log('no locked location');
 			$pageView = 'allowlocation';
 		} else {
+			$CENTER_POINT = [page.data.userMap.locked_lng, page.data.userMap.locked_lat];
 			$pageView = 'home';
 		}
 	});
 
+	console.log('Page Data: ', page.data.userMap);
+
+	$agents = page.data.agents;
+	$maxAgentDeployed = page.data.maxAgentDeployed;
 	const NAVBAR_PAGES = ['home', 'upgrades', 'tasks'];
 </script>
 

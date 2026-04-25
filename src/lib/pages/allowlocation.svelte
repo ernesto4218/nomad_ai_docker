@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { CENTER_POINT } from '$lib/stores/variables';
 	import { pageView } from '$lib/stores/pageView';
 	import { MapPin, ShieldCheck, AlertCircle, Loader2, Lock } from '@lucide/svelte';
 
@@ -14,8 +15,8 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ lat, lng })
 			});
-
 			if (!res.ok) throw new Error('Failed to send location');
+			CENTER_POINT.set([lng, lat]);
 		} catch (err) {
 			console.error('Send location error:', err);
 			status = 'error';
@@ -25,42 +26,72 @@
 
 	function getLocation() {
 		if (status === 'requesting') return;
-
 		status = 'requesting';
 		errorMessage = '';
 
-		navigator.geolocation.getCurrentPosition(
-			async (position) => {
-				const lat = position.coords.latitude;
-				const lng = position.coords.longitude;
+		//@ts-ignore
+		const webApp = window.Telegram?.WebApp;
+		const locationManager = webApp?.LocationManager;
 
-				await sendLocation(lat, lng);
+		if (locationManager) {
+			// If already inited, just call getLocation again — Telegram will re-prompt if denied
+			const doGetLocation = () => {
+				locationManager.getLocation(async (data: any) => {
+					if (data) {
+						const { longitude, latitude } = data;
+						await sendLocation(latitude, longitude);
+						if (status !== 'error') {
+							coords = { lat: latitude, lng: longitude };
+							status = 'success';
+						}
+					} else {
+						status = 'error';
+						errorMessage = 'Location access denied. Please allow it when prompted.';
+					}
+				});
+			};
 
-				if (status !== 'error') {
-					coords = { lat, lng };
-					status = 'success';
+			if (locationManager.isInited) {
+				doGetLocation();
+			} else {
+				locationManager.init((success: any) => {
+					if (!success || !locationManager.isLocationAvailable) {
+						status = 'error';
+						errorMessage = 'Location unavailable. Check your device settings.';
+						return;
+					}
+					doGetLocation();
+				});
+			}
+		} else {
+			// Browser fallback
+			navigator.geolocation.getCurrentPosition(
+				async (position) => {
+					const { latitude, longitude } = position.coords;
+					await sendLocation(latitude, longitude);
+					if (status !== 'error') {
+						coords = { lat: latitude, lng: longitude };
+						status = 'success';
+					}
+				},
+				(error) => {
+					if (error.code === 2 && attempts < 2) {
+						attempts++;
+						setTimeout(getLocation, 1500);
+						return;
+					}
 					attempts = 0;
-				}
-			},
-			(error) => {
-				if (error.code === 2 && attempts < 2) {
-					attempts++;
-					setTimeout(getLocation, 1500);
-					return;
-				}
-
-				attempts = 0;
-				status = 'error';
-
-				if (error.code === 1)
-					errorMessage = 'Location access denied. Please allow it in your browser settings.';
-				else if (error.code === 2)
-					errorMessage = 'Location unavailable. Please check your device settings.';
-				else if (error.code === 3) errorMessage = 'Request timed out. Please try again.';
-				else errorMessage = 'Could not get your location. Please try again.';
-			},
-			{ timeout: 10000, enableHighAccuracy: false, maximumAge: 30000 }
-		);
+					status = 'error';
+					if (error.code === 1)
+						errorMessage = 'Location access denied. Please allow it in your browser settings.';
+					else if (error.code === 2)
+						errorMessage = 'Location unavailable. Please check your device settings.';
+					else if (error.code === 3) errorMessage = 'Request timed out. Please try again.';
+					else errorMessage = 'Could not get your location. Please try again.';
+				},
+				{ timeout: 10000, enableHighAccuracy: false, maximumAge: 30000 }
+			);
+		}
 	}
 </script>
 
@@ -78,27 +109,42 @@
 					<Lock class="size-7 text-emerald-500" />
 				{/if}
 			</div>
-			<h1 class="text-sm font-bold text-white">Location Access</h1>
-			<p class="text-xs text-zinc-500">We need your location to continue.</p>
+			<h1 class="text-sm font-bold text-white">Set Base Location</h1>
+
+			{#if status === 'success'}
+				<p class="text-xs text-zinc-500">Your base location has been locked.</p>
+			{:else}
+				<p class="text-xs text-zinc-500">We need your location to get started.</p>
+			{/if}
 		</div>
+
+		<!-- Warning banner — always visible until confirmed -->
+		{#if status !== 'success'}
+			<div class="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-center">
+				<p class="text-xs font-semibold text-amber-400">⚠ This cannot be changed later</p>
+				<p class="mt-1 text-xs text-zinc-400">
+					The location you share now will be permanently set as your base. Make sure you're at your
+					intended location before proceeding.
+				</p>
+			</div>
+		{/if}
 
 		{#if status === 'success'}
 			<div
 				class="space-y-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-center"
 			>
-				<p class="text-xs font-bold text-emerald-400">Location Confirmed</p>
+				<p class="text-xs font-bold text-emerald-400">Base Location Locked</p>
 				<div class="flex justify-center gap-3 font-mono text-xs text-zinc-400">
 					<span>LAT {coords?.lat.toFixed(4)}</span>
 					<span>LNG {coords?.lng.toFixed(4)}</span>
 				</div>
+				<p class="text-xs text-zinc-500">This location is now permanently saved.</p>
 			</div>
 			<button
-				onclick={() => {
-					$pageView = 'home';
-				}}
+				onclick={() => ($pageView = 'home')}
 				class="w-full rounded-xl bg-white py-3 text-xs font-bold text-black"
 			>
-				Continue
+				Continue to Home
 			</button>
 		{:else if status === 'error'}
 			<div class="rounded-xl border border-red-900/30 bg-red-950/20 p-4">
@@ -121,7 +167,7 @@
 					Getting location...
 				{:else}
 					<MapPin class="size-4" />
-					Allow Location
+					Lock My Location
 				{/if}
 			</button>
 		{/if}

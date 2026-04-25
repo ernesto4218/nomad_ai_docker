@@ -25,6 +25,7 @@
 	let mapContainer: HTMLElement;
 	let isLoading = $state(true);
 	let isMapReady = $state(false);
+	let locationmanagerInit = $state(false);
 	const landingMarkers: { [key: string]: mapboxgl.Marker } = {};
 	const movingMarkers: Record<string, mapboxgl.Marker> = {};
 	const pointMarkers: Record<string, mapboxgl.Marker[]> = {};
@@ -34,55 +35,52 @@
 		//@ts-ignore
 		const webApp = window.Telegram?.WebApp;
 		const locationManager = webApp?.LocationManager;
-
 		mapboxgl.accessToken = PUBLIC_MAPBOX_TOKEN;
 
+		// Centralized failure handler
+		const handleFailure = (reason: any) => {
+			console.warn(`Location failed: ${reason}`);
+			$pageView = 'allowlocation';
+			// Optional: initMap(DEFAULT_COORDS) so they see something
+		};
+
 		if (locationManager) {
-			locationManager.init(() => {
-				// Check if GPS is enabled on the device hardware level
-				if (!locationManager.isLocationAvailable) {
-					console.warn('Location services are disabled on device.');
-					$pageView = 'allowlocation';
+			// 1. Set a safety timeout (Telegram init can occasionally hang)
+			const initTimeout = setTimeout(() => {
+				if (!locationManager.isInited) {
+					console.log('no telegram response, falling back to browser geolocation');
+					handleBrowserFallback();
+				}
+			}, 3000);
+
+			locationManager.init((success: any) => {
+				clearTimeout(initTimeout);
+
+				if (!success) {
+					handleFailure('Initialization failed');
 					return;
 				}
 
-				// Request the high-accuracy location from Telegram
-				//@ts-ignore
-				locationManager.getLocation((data) => {
+				if (!locationManager.isLocationAvailable) {
+					handleFailure('Hardware GPS disabled');
+					return;
+				}
+
+				locationManager.getLocation((data: any) => {
 					if (data) {
-						// Telegram returns { latitude, longitude, ... }
 						const { longitude, latitude } = data;
-						$CENTER_POINT = [longitude, latitude];
-						initMap([longitude, latitude]);
+						if (!CENTER_POINT) {
+							$CENTER_POINT = [longitude, latitude];
+						}
+						initMap($CENTER_POINT);
 					} else {
-						// User denied permission or error occurred
-						console.error('Telegram location access denied.');
-						$pageView = 'allowlocation';
+						handleFailure('Permission denied by user');
 					}
 				});
 			});
 		} else {
-			// Fallback for browser testing or older Telegram versions
-			console.warn('Telegram LocationManager not found, using browser API.');
 			handleBrowserFallback();
 		}
-
-		// if ('geolocation' in navigator) {
-		// 	navigator.geolocation.getCurrentPosition(
-		// 		(position) => {
-		// 			const { longitude, latitude } = position.coords;
-		// 			$CENTER_POINT = [longitude, latitude];
-		// 			initMap([longitude, latitude]);
-		// 		},
-		// 		(error) => {
-		// 			console.error('Location error, loading fallback:', error);
-		// 			$pageView = 'allowlocation';
-		// 		}
-		// 	);
-		// } else {
-		// 	// initMap([-71.06776, 42.35816]);
-		// 	$pageView = 'allowlocation';
-		// }
 	});
 
 	function handleBrowserFallback() {
@@ -90,8 +88,10 @@
 			navigator.geolocation.getCurrentPosition(
 				(position) => {
 					const { longitude, latitude } = position.coords;
-					$CENTER_POINT = [longitude, latitude];
-					initMap([longitude, latitude]);
+					if (!CENTER_POINT) {
+						$CENTER_POINT = [longitude, latitude];
+					}
+					initMap($CENTER_POINT);
 				},
 				() => {
 					$pageView = 'allowlocation';

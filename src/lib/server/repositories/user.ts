@@ -90,7 +90,8 @@ export const userRepository = (db: PostgresJsDatabase<typeof schema>) => ({
         await db.insert(users)
             .values({
                 ...payload,
-                invitedBy: invitedBy 
+                invitedBy: invitedBy,
+                lastOnline: new Date(),
             })
             .onConflictDoUpdate({
                 target: users.userId,
@@ -101,6 +102,7 @@ export const userRepository = (db: PostgresJsDatabase<typeof schema>) => ({
                     languageCode: payload.languageCode,
                     isPremium: payload.isPremium,
                     photoUrl: payload.photoUrl,
+                    lastOnline: new Date(),
                 }
             });
 

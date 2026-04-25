@@ -4,13 +4,11 @@ import { error, type Handle } from '@sveltejs/kit';
 
 export const handle: Handle = async ({ event, resolve }) => {
   const token = event.cookies.get('token');
-  const path = event.url.pathname;
+  const path = event.url.pathname.toLowerCase();
 
-  // 1. Define your "Free Pass" route
-  // We use .toLowerCase() to stay safe against casing issues
-  const isValidateRoute = path.toLowerCase().includes('/api/post/validate');
+  const isValidateRoute = path.includes('/api/post/validate');
+  const isCronRoute = path.startsWith('/api/cron/');  // 👈 add this
 
-  // 2. Process token if it exists
   if (token) {
     try {
       const payload = jwt.verify(token, env.JWT_SECRET) as { user: App.Locals['user'] };
@@ -18,24 +16,13 @@ export const handle: Handle = async ({ event, resolve }) => {
     } catch (err) {
       console.error("JWT Verification failed:", err);
       event.cookies.delete('token', { path: '/' });
-      // Even if the token is garbage, if they are hitting /validate, let them through
-      // so they can get a NEW valid token.
     }
   }
 
-  // 3. Strict Enforcement Logic
-  if (!event.locals.user && !isValidateRoute) {
-    /* We only throw error if:
-       - User is NOT authenticated
-       - AND they are NOT on the validate route
-       - AND it's an API call or a data-sensitive page
-    */
-    if (path.toLowerCase().startsWith('/api')) {
+  if (!event.locals.user && !isValidateRoute && !isCronRoute) {  // 👈 add !isCronRoute
+    if (path.startsWith('/api')) {
       throw error(401, 'Unauthorized: Token required');
     }
-    
-    // Optional: Redirect to a landing page if it's a page request
-    // throw redirect(307, '/welcome'); 
   }
 
   return await resolve(event);

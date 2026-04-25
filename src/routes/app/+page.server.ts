@@ -27,6 +27,8 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
     maxAgent = true;
   }
 
+  console.log("My agents: ", agents);
+
   return {
     user,
     balance,

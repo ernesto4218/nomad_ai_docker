@@ -1,4 +1,4 @@
-import { pgTable, text, integer, serial, boolean, timestamp, doublePrecision, jsonb, bigint } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, serial, boolean, timestamp, doublePrecision, jsonb, bigint, uuid } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   // IMPORTANT: Telegram user IDs exceed the 32-bit integer limit. 
@@ -11,6 +11,7 @@ export const users = pgTable('users', {
   isPremium: boolean('is_premium'), // Native boolean!
   photoUrl: text('photo_url'),
   invitedBy: bigint('invited_by', { mode: 'number' }),
+  lastOnline: timestamp('last_online').defaultNow(),
 });
 
 export const balances = pgTable('balances', {
@@ -96,4 +97,13 @@ export const dailyTasks = pgTable('daily_tasks', {
   reward: integer('reward').notNull().default(0), 
   last_completed: timestamp('last_completed'),
   created_at: timestamp('created_at').defaultNow(),
+});
+
+export const cronLogs = pgTable('cron_logs', {
+  id: serial('id').primaryKey(),
+  jobName: text('job_name').notNull(),
+  userId:  text('user_id').notNull(),
+  success: boolean('success').notNull(),
+  message: text('message'),
+  ranAt:   timestamp('ran_at').defaultNow().notNull(),
 });
