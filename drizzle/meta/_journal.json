@@ -8,6 +8,13 @@
       "when": 1776861579161,
       "tag": "0000_faithful_penance",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777124232442,
+      "tag": "0001_fat_leo",
+      "breakpoints": true
     }
   ]
 }
