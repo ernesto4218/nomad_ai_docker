@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "start": "drizzle-kit migrate && node build/index.js",
+    "start": "drizzle-kit migrate --config=drizzle.config.js && echo '=== MIGRATION DONE, STARTING SERVER ===' && node build/index.js",
     "dev": "vite dev",
     "build": "vite build",
     "preview": "node build",
