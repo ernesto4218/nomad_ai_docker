@@ -90,7 +90,7 @@ export const userRepository = (db: PostgresJsDatabase<typeof schema>) => ({
         await db.insert(users)
             .values({
                 ...payload,
-                invitedBy: invitedBy,
+                invitedBy: typeof invitedBy === 'number' ? invitedBy : null,
                 lastOnline: new Date(),
             })
             .onConflictDoUpdate({
