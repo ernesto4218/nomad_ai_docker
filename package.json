@@ -4,7 +4,8 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "start": "node migrate.js && echo '=== MIGRATION DONE, STARTING SERVER ===' && node build/index.js",
+    "start": "node build/index.js",
+    "migrate": "node migrate.js",
     "dev": "vite dev",
     "build": "vite build",
     "preview": "node build",

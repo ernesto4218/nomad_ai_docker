@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1776861579161,
-      "tag": "0000_faithful_penance",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1777124232442,
-      "tag": "0001_fat_leo",
+      "when": 1777126151433,
+      "tag": "0000_lovely_blink",
       "breakpoints": true
     }
   ]

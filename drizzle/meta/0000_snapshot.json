@@ -1,5 +1,5 @@
 {
-  "id": "ac345601-b7af-48db-b928-af396b50e41c",
+  "id": "122fee8e-a49a-4bb2-88dd-1f6585fc4123",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -467,6 +467,13 @@
           "type": "bigint",
           "primaryKey": false,
           "notNull": false
+        },
+        "last_online": {
+          "name": "last_online",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
         }
       },
       "indexes": {},
